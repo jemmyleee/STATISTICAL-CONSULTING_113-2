@@ -1,1 +1,1 @@
-# MyNewReposity
+STATISTICAL CONSULTING Project
