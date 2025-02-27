@@ -1,0 +1,70 @@
+---
+title: "HW"
+subtitle: "You can run R and Python code in the repot"
+date: 2025/02/27
+author: Jen Wei,Lee
+format:
+ pdf:
+    include-in-header:
+      - text: |
+          \usepackage{setspace,relsize}
+          \usepackage{geometry}
+          \geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+#mainfont: "Microsoft JhengHei UI"
+#mainfont: "Microsoft JhengHei"
+mainfont: "Microsoft JhengHei Bold"
+toc: true
+lang: zh-Tw
+documentclass: article
+pdf-engine: xelatex
+execute:
+  tidy: true
+  echo: true
+  warning: false
+  message: false
+---
+
+## 一、讀取資料
+
+```{r}
+#| results: asis
+# R Interface to Python
+library(reticulate)
+library(Hmisc)
+latex(describe(mtcars), file="")
+```
+
+
+## 二、候選人的知名度、支持度
+
+```{python}
+# use the command below to install package (run it once)
+#! pip install matplotlib # (remove # to run it)
+```
+
+```{python}
+import matplotlib.pyplot as plt
+import numpy as np
+species = ('Adelie', 'Chinstrap', 'Gentoo')
+sex_counts = {
+    'Male': np.array([73, 34, 61]),
+    'Female': np.array([73, 34, 58]),
+}
+width = 0.6  # the width of the bars: can also be len(x) sequence
+fig, ax = plt.subplots()
+bottom = np.zeros(3)
+
+for sex, sex_count in sex_counts.items():
+    p = ax.bar(species, sex_count, width, label=sex, bottom=bottom)
+    bottom += sex_count
+
+    ax.bar_label(p, label_type='center')
+
+ax.set_title('Number of penguins by sex')
+ax.legend()
+plt.show()
+```
+
+
+## 三、第3號候選人支持率的預測模式
+
