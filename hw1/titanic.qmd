@@ -1,6 +1,6 @@
 ---
 title: STATISTICAL CONSULTING HW1
-subtitle: Exploratory Data Analysis of titanic
+subtitle: Data Analysis of titanic
 date: 2025/02/27
 author: Jen Wei,Lee(RE6131024)
 format:
