@@ -1,0 +1,234 @@
+---
+title: STATISTICAL CONSULTING HW2
+subtitle: Data Analysis of mushroom
+date: 2025/03/15
+author: Jen Wei,Lee(RE6131024)
+format:
+  pdf:
+    include-in-header:
+      - text: |
+          \usepackage{setspace,relsize}
+          \usepackage{geometry}
+          \geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+toc: true
+documentclass: article
+pdf-engine: xelatex
+execute:
+  tidy: true
+  echo: true
+  warning: false
+  message: false
+jupyter: python3
+---
+
+
+
+## Easy look
+
+```{python}
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+from scipy.stats import chi2_contingency
+
+# File path
+file_path = '/home/lee/workspace/STATISTICAL-CONSULTING_113-2/HW2/mushroom/primary_data.csv'
+
+# Read the CSV file with semicolon as delimiter
+df = pd.read_csv(file_path, delimiter=';')
+
+# Display basic information about the dataset
+print("Dataset Shape:", df.shape)
+```
+
+```{python}
+print("Column Names:")
+for col in df.columns:
+    print(f"- {col}")
+```
+
+```{python}
+print("Data Types:")
+print(df.dtypes)
+```
+
+```{python}
+print("Missing Values Count:")
+print(df.isna().sum())
+```
+
+```{python}
+print("\nCount of Mushrooms by Family:")
+family_counts = df['family'].value_counts()
+print(family_counts)
+```
+
+```{python}
+# Count of edible vs poisonous mushrooms
+print("\nCount of Edible vs Poisonous Mushrooms:")
+class_counts = df['class'].value_counts()
+print(class_counts)
+print("\nPercentage of Edible vs Poisonous Mushrooms:")
+print(class_counts / len(df) * 100)
+```
+
+```{python}
+# Function to extract average from range values
+def extract_average(range_str):
+    if pd.isna(range_str) or range_str == '':
+        return np.nan
+    try:
+        # Remove brackets and split by comma
+        range_str = str(range_str).strip('[]')
+        values = [float(x.strip()) for x in range_str.split(',')]
+        return sum(values) / len(values)
+    except:
+        return np.nan
+
+# Process range columns
+range_columns = ['cap-diameter', 'stem-height', 'stem-width']
+for col in range_columns:
+    if col in df.columns:
+        df[f'{col}_avg'] = df[col].apply(extract_average)
+
+# Basic statistics for processed numerical columns
+print("\nBasic Statistics for Numerical Features:")
+numerical_cols = [col for col in df.columns if col.endswith('_avg')]
+if numerical_cols:
+    print(df[numerical_cols].describe())
+```
+
+## Table 1
+
+```{python}
+# Fixed function to analyze feature association with edibility
+def analyze_feature_edibility(df, feature):
+    """
+    Analyze the association between a feature and mushroom edibility
+    without using crosstab which has issues with duplicate labels.
+    """
+    if feature not in df.columns:
+        return None
+    
+    # Create a copy to avoid modifying the original data
+    result = {"Feature values": [], "Edible count": [], "Poisonous count": []}
+    
+    # Process the feature values
+    for value in df[feature].dropna().unique():
+        # For features with multiple values like "[e, o]"
+        value_str = str(value).strip('[]')
+        values = [v.strip() for v in value_str.split(',')]
+        
+        for v in values:
+            if v not in result["Feature values"]:
+                # Filter rows with this feature value
+                matches = df[df[feature].str.contains(v, na=False)]
+                
+                # Count edible and poisonous mushrooms
+                edible_count = len(matches[matches['class'] == 'e'])
+                poisonous_count = len(matches[matches['class'] == 'p'])
+                
+                # Add to results
+                result["Feature values"].append(v)
+                result["Edible count"].append(edible_count)
+                result["Poisonous count"].append(poisonous_count)
+    
+    # Convert to DataFrame for better display
+    result_df = pd.DataFrame(result)
+    
+    # Calculate total and percentages
+    result_df["Total"] = result_df["Edible count"] + result_df["Poisonous count"]
+    result_df["% Edible"] = (result_df["Edible count"] / result_df["Total"] * 100).round(1)
+    result_df["% Poisonous"] = (result_df["Poisonous count"] / result_df["Total"] * 100).round(1)
+    
+    return result_df
+
+# Analyze important features
+print("Table1:")
+important_features = ['cap-color', 'does-bruise-or-bleed', 'gill-attachment', 'has-ring', 'cap-shape', 'gill-color']
+
+for feature in important_features:
+    if feature in df.columns:
+        print(f"\nAssociation between {feature} and edibility:")
+        result = analyze_feature_edibility(df, feature)
+        if result is not None:
+            print(result)
+
+
+print("\nAnalysis completed!")
+```
+
+## plot
+
+```{python}
+plt.figure(figsize=(10, 6))
+if 'cap-diameter_avg' in df.columns:
+    sns.boxplot(x='class', y='cap-diameter_avg', data=df)
+    plt.title('Distribution of Cap Diameters by Edibility')
+    plt.xlabel('Class (e: edible, p: poisonous)')
+    plt.ylabel('Average Cap Diameter (cm)')
+    plt.tight_layout()
+```
+
+```{python}
+plt.figure(figsize=(12, 6))
+if 'cap-color' in df.columns:
+    # Process multi-value fields properly
+    cap_colors = []
+    for color_str in df['cap-color'].dropna():
+        # Remove brackets and split by comma
+        colors = str(color_str).strip('[]').split(',')
+        cap_colors.extend([c.strip() for c in colors])
+    
+    cap_color_counts = pd.Series(cap_colors).value_counts()
+    cap_color_counts.plot(kind='bar', color='skyblue')
+    plt.title('Distribution of Mushrooms by Cap Color')
+    plt.xlabel('Cap Color')
+    plt.ylabel('Count')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+```
+
+```{python}
+plt.figure(figsize=(10, 6))
+if 'stem-height_avg' in df.columns and 'stem-width_avg' in df.columns:
+    sns.scatterplot(x='stem-width_avg', y='stem-height_avg', hue='class', data=df)
+    plt.title('Relationship Between Stem Height and Width')
+    plt.xlabel('Average Stem Width (cm)')
+    plt.ylabel('Average Stem Height (cm)')
+    plt.tight_layout()
+```
+
+```{python}
+plt.figure(figsize=(12, 6))
+if 'habitat' in df.columns:
+    # Process multi-value fields properly
+    habitats = []
+    for habitat_str in df['habitat'].dropna():
+        # Remove brackets and split by comma
+        habitat_list = str(habitat_str).strip('[]').split(',')
+        habitats.extend([h.strip() for h in habitat_list])
+    
+    habitat_counts = pd.Series(habitats).value_counts()
+    habitat_counts.plot(kind='bar', color='lightgreen')
+    plt.title('Distribution of Mushrooms by Habitat')
+    plt.xlabel('Habitat')
+    plt.ylabel('Count')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+```
+
+```{python}
+plt.figure(figsize=(12, 6))
+edibility_by_family = pd.crosstab(df['family'], df['class'])
+edibility_by_family_pct = edibility_by_family.div(edibility_by_family.sum(axis=1), axis=0) * 100
+edibility_by_family_pct.plot(kind='bar', stacked=True)
+plt.title('Percentage of Edible vs Poisonous Mushrooms by Family')
+plt.xlabel('Mushroom Family')
+plt.ylabel('Percentage')
+plt.legend(title='Class', labels=['Edible', 'Poisonous'])
+plt.xticks(rotation=45)
+plt.tight_layout()
+```
+
